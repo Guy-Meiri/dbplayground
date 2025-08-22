@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -18,10 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ArrowLeft, Upload, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Upload, AlertCircle, ImagePlus, X } from 'lucide-react'
 import Link from 'next/link'
-import { useCollectors, useCreatePalindrome } from '@/lib/api'
+import { useCollectors, useCreatePalindrome, useUploadImage } from '@/lib/api'
 import { isPalindrome } from '@/lib/palindrome-utils'
+import Image from 'next/image'
 
 // Form validation schema
 const palindromeSchema = z.object({
@@ -30,8 +31,6 @@ const palindromeSchema = z.object({
     .min(1, 'License plate is required')
     .max(20, 'License plate must be 20 characters or less')
     .refine((val) => isPalindrome(val), 'License plate must be a palindrome'),
-  image_url: z.string().url('Please enter a valid image URL'),
-  image_storage_path: z.string().min(1, 'Storage path is required'),
   car_type: z.string().optional(),
   location_found: z.string().optional(),
   date_found: z.string().optional(),
@@ -46,8 +45,12 @@ export default function UploadPalindrome() {
   const router = useRouter()
   const { data: collectors, isLoading: collectorsLoading } = useCollectors()
   const createPalindrome = useCreatePalindrome()
+  const uploadImage = useUploadImage()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
   const {
     register,
@@ -62,16 +65,66 @@ export default function UploadPalindrome() {
   const licenseplate = watch('license_plate')
   const collectorId = watch('collector_id')
 
+  // Handle file selection
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file')
+        return
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB')
+        return
+      }
+
+      setSelectedFile(file)
+      
+      // Create preview URL
+      const url = URL.createObjectURL(file)
+      setPreviewUrl(url)
+    }
+  }
+
+  // Clear selected file
+  const clearFile = () => {
+    setSelectedFile(null)
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+      setPreviewUrl(null)
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   const onSubmit = async (data: PalindromeFormData) => {
     if (!session?.user?.dbId) {
       alert('User session not found')
       return
     }
 
+    if (!selectedFile) {
+      alert('Please select an image file')
+      return
+    }
+
     setIsSubmitting(true)
     try {
+      // First upload the image
+      const uploadResult = await uploadImage.mutateAsync({
+        file: selectedFile,
+        bucket: 'images'
+      })
+
+      // Then create the palindrome record with the uploaded image info
       await createPalindrome.mutateAsync({
         ...data,
+        image_url: uploadResult.publicUrl,
+        image_storage_path: uploadResult.path,
         uploaded_by_admin_id: session.user.dbId,
         date_found: data.date_found || null,
         car_type: data.car_type || null,
@@ -144,37 +197,73 @@ export default function UploadPalindrome() {
                 )}
               </div>
 
-              {/* Image URL */}
+              {/* Image Upload */}
               <div className="space-y-2">
-                <Label htmlFor="image_url">Image URL *</Label>
-                <Input
-                  id="image_url"
-                  {...register('image_url')}
-                  placeholder="https://example.com/car-image.jpg"
-                  type="url"
-                />
-                {errors.image_url && (
-                  <p className="text-sm text-red-600 flex items-center gap-1">
-                    <AlertCircle className="h-4 w-4" />
-                    {errors.image_url.message}
-                  </p>
-                )}
-              </div>
+                <Label htmlFor="image_file">Image File *</Label>
+                <div className="space-y-4">
+                  {/* File Input */}
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      id="image_file"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <ImagePlus className="h-4 w-4 mr-2" />
+                      {selectedFile ? 'Change Image' : 'Select Image'}
+                    </Button>
+                  </div>
 
-              {/* Storage Path */}
-              <div className="space-y-2">
-                <Label htmlFor="image_storage_path">Storage Path *</Label>
-                <Input
-                  id="image_storage_path"
-                  {...register('image_storage_path')}
-                  placeholder="palindromes/2024/image-123.jpg"
-                />
-                {errors.image_storage_path && (
-                  <p className="text-sm text-red-600 flex items-center gap-1">
-                    <AlertCircle className="h-4 w-4" />
-                    {errors.image_storage_path.message}
-                  </p>
-                )}
+                  {/* File Info & Preview */}
+                  {selectedFile && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {selectedFile.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearFile}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {/* Image Preview */}
+                      {previewUrl && (
+                        <div className="relative aspect-video w-full max-w-sm mx-auto bg-muted rounded-lg overflow-hidden">
+                          <Image
+                            src={previewUrl}
+                            alt="Preview"
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!selectedFile && (
+                    <p className="text-sm text-muted-foreground">
+                      Select an image file (JPG, PNG, GIF). Max size: 5MB
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Collector */}
@@ -255,7 +344,7 @@ export default function UploadPalindrome() {
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={isSubmitting || !collectorId}
+                disabled={isSubmitting || !collectorId || !selectedFile}
               >
                 {isSubmitting ? (
                   <>
@@ -292,7 +381,9 @@ export default function UploadPalindrome() {
                 <li>• Use clear, high-quality photos</li>
                 <li>• Ensure license plate is clearly visible</li>
                 <li>• Include the full vehicle if possible</li>
-                <li>• Avoid blurry or dark images</li>
+                <li>• Supported formats: JPG, PNG, GIF</li>
+                <li>• Maximum file size: 5MB</li>
+                <li>• Images are automatically stored securely</li>
               </ul>
             </div>
 

@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "setup-storage": "node scripts/setup-storage.js",
+    "test-storage": "node scripts/test-storage.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",

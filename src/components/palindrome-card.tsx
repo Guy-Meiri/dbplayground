@@ -3,6 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { PalindromeWithCollector } from '@/lib/api'
+import Image from 'next/image'
 
 interface PalindromeCardProps {
   palindrome: PalindromeWithCollector
@@ -12,15 +13,31 @@ export function PalindromeCard({ palindrome }: PalindromeCardProps) {
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="aspect-video bg-muted relative">
-        {/* Placeholder for car image */}
-        <div className="w-full h-full bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/20 dark:to-blue-800/30 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+        {palindrome.image_url ? (
+          <>
+            <Image
+              src={palindrome.image_url}
+              alt={`License plate ${palindrome.license_plate}`}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+            {/* Overlay with license plate text */}
+            <div className="absolute bottom-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-sm font-mono">
               {palindrome.license_plate}
             </div>
-            <div className="text-sm text-blue-500 dark:text-blue-400">Car Photo Coming Soon</div>
+          </>
+        ) : (
+          /* Placeholder for when no image is available */
+          <div className="w-full h-full bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/20 dark:to-blue-800/30 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+                {palindrome.license_plate}
+              </div>
+              <div className="text-sm text-blue-500 dark:text-blue-400">No Image Available</div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-2">
