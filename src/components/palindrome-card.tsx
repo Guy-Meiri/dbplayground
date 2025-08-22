@@ -2,10 +2,10 @@
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { MockPalindrome } from '@/lib/mock-data'
+import { PalindromeWithCollector } from '@/lib/api'
 
 interface PalindromeCardProps {
-  palindrome: MockPalindrome
+  palindrome: PalindromeWithCollector
 }
 
 export function PalindromeCard({ palindrome }: PalindromeCardProps) {
@@ -28,13 +28,18 @@ export function PalindromeCard({ palindrome }: PalindromeCardProps) {
             {palindrome.license_plate}
           </Badge>
           <span className="text-sm text-muted-foreground">
-            {new Date(palindrome.date_found).toLocaleDateString()}
+            {palindrome.date_found 
+              ? new Date(palindrome.date_found).toLocaleDateString()
+              : palindrome.created_at 
+                ? new Date(palindrome.created_at).toLocaleDateString()
+                : 'Date unknown'
+            }
           </span>
         </div>
         <div className="space-y-1 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Found by:</span>
-            <span className="font-medium">{palindrome.collector_name}</span>
+            <span className="font-medium">{palindrome.collector.name}</span>
           </div>
           {palindrome.location_found && (
             <div className="flex items-center justify-between">

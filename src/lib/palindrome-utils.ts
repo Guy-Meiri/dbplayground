@@ -206,7 +206,8 @@ export function generateLeaderboard(
       if (totalFinds === 0) return null
       
       const dates = collectorPalindromes
-        .map(p => new Date(p.created_at))
+        .filter(p => p.created_at)
+        .map(p => new Date(p.created_at!))
         .sort((a, b) => a.getTime() - b.getTime())
       
       return {
