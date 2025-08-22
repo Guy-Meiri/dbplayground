@@ -11,12 +11,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export function Navigation() {
   const { data: session, status } = useSession()
 
   return (
-    <nav className="border-b bg-white">
+    <nav className="border-b bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           {/* Logo and main nav */}
@@ -25,20 +26,20 @@ export function Navigation() {
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">P</span>
               </div>
-              <span className="font-bold text-xl text-gray-900">Palindrome Tracker</span>
+              <span className="font-bold text-xl text-foreground">Palindrome Tracker</span>
             </Link>
             
             {/* Main navigation links */}
             <div className="hidden md:ml-10 md:flex md:space-x-8">
               <Link 
                 href="/" 
-                className="text-gray-900 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
+                className="text-foreground hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
               >
                 Gallery
               </Link>
               <Link 
                 href="/leaderboard" 
-                className="text-gray-900 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
+                className="text-foreground hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
               >
                 Leaderboard
               </Link>
@@ -46,7 +47,7 @@ export function Navigation() {
               {session?.user && (
                 <Link 
                   href="/admin" 
-                  className="text-gray-900 hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
+                  className="text-foreground hover:text-blue-600 px-3 py-2 text-sm font-medium transition-colors"
                 >
                   Admin
                 </Link>
@@ -56,6 +57,7 @@ export function Navigation() {
 
           {/* User menu */}
           <div className="flex items-center space-x-4">
+            <ThemeToggle />
             {status === 'loading' ? (
               <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
             ) : session?.user ? (
